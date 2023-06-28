@@ -15,47 +15,45 @@
   $: innerWidth = width - margin.left - margin.right;
   let innerHeight = height - margin.top - margin.bottom;
 
-  const ageRollup = rollups(
+  $: ageRollup = rollups(
     data,
     v => mean(v, d => +d.age),
     d => d.club_name
   )
 
-  const dataWageRollup = rollups(
+  $: dataWageRollup = rollups(
     data,
     v => mean(v, d => d.wage_eur),
     d => d.club_name
   )
 
-  const dataValueRollup = rollups(
+  $: dataValueRollup = rollups(
     data,
     v => mean(v, d => d.overall),
     d => d.club_name
   ).sort((a, b) => a[1] - b[1])
 
+  $: scatterData = dataWageRollup.map((d, i) => {
+    const clubName = d[0];
+    const wage = d[1];
+    const score = dataValueRollup.find(a => a[0] === clubName)[1];
+    const age = ageRollup.find(a => a[0] === clubName)[1];
+    const clubNameRelabel = clubs.clubsToHighlight.includes(clubName) ? clubName : "Other";
 
-  let scatterData = []
-  dataWageRollup.forEach((d,i) => {
-    scatterData.push({
-      wage: d[1],
-      club_name: d[0],
-      score: dataValueRollup.find(a => a[0] === d[0])[1],
-      age: ageRollup.find(a => a[0] === d[0])[1],
-      club_name_relabel: clubs.clubsToHighlight.includes(d[0]) ? d[0] : "Other"
-    })
-  })
+    return { wage, club_name: clubName, score, age, club_name_relabel: clubNameRelabel };
+  });
 
   let colorScale = scaleOrdinal()
     .domain(clubs.clubsToHighlight.concat('Other')) 
     .range(clubs.colorRange);
 
   $: xScale = scaleLinear()
-    .domain([60, 80])
+    .domain([64, 84])
     .range([0, innerWidth]);
 
   let yScale = scaleLinear()
     //.domain(extent(scatterData, d => d.wage))
-    .domain([0, 130000])
+    .domain([0, 180000])
     .range([innerHeight, 0]);
 
   $: radiusScale = scaleSqrt()
@@ -73,7 +71,7 @@
 >
   <svg {width} {height} on:mouseleave={() => hoveredData = null}>
     <g class="inner-chart" transform="translate({margin.left}, {margin.top})">
-        <AxisY_Linear width={innerWidth} {yScale} title={'Average wage of players'}/>
+        <AxisY_Linear width={innerWidth} {yScale} title={'Average wage of players (in euros)'} tickNum=10/>
         <AxisX height={innerHeight} width={innerWidth} {xScale} title={'Average score of players'}/>
         {#each scatterData as d, index}
           <!-- svelte-ignore a11y-no-noninteractive-tabindex -->
@@ -115,11 +113,5 @@
   circle {
     transition: r 300ms ease, opacity 500ms ease;
     cursor: pointer;
-  }
-
-  h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.35rem;
-    font-weight: 600;
   }
 </style>

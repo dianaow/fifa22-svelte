@@ -1,4 +1,5 @@
 <script>
+  import { onMount, afterUpdate } from "svelte";
   import AxisX from "$components/AxisX.svelte";
   import AxisY_Categorical from "$components/AxisY_Categorical.svelte";
   import Legend from "$components/Legend.svelte";
@@ -10,7 +11,7 @@
 
   export let data, clubs
   let width = 400,
-    height = 420;
+    height = 430;
   const margin = { top: 0, right: 0, left: 0, bottom: 40 };
   
   $: innerWidth = width - margin.left - margin.right;
@@ -18,46 +19,6 @@
 
   // Generate the average for each club, so that we can sort according to that
   const categories = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physic']
-
-  let newData = []
-  categories.forEach(category => {
-    data.forEach(d => {
-      newData.push({
-        'short_name': d['short_name'],
-        'club_name': d['club_name'],
-        'league_name': d['league_name'],
-        'category' : category,
-        'value': +d[category]
-      })
-    })
-  })
-
-  const ageRollup = rollups(
-    data,
-    v => mean(v, d => +d.age),
-    d => d.club_name
-  )
-
-  const newDataRollup = rollups(
-      newData,
-      v => mean(v, d => d.value),
-      d => d.category,
-      d => d.club_name
-    )
-
-  let beeswarmData = []
-  newDataRollup.forEach(d => {
-    d[1].sort((a, b) => a[1] - b[1]) // Sort according to value
-    d[1].map((el,i) => {
-      beeswarmData.push({
-        category: d[0],
-        club_name: el[0],
-        value: el[1],
-        age: ageRollup.find(a => a[0] === el[0])[1],
-        club_name_relabel: clubs.clubsToHighlight.includes(el[0]) ? el[0] : "Other"
-      })
-    })
-  })
 
   let colorScale = scaleOrdinal()
     .domain(clubs.clubsToHighlight.concat('Other')) 
@@ -76,14 +37,54 @@
     .range([innerHeight, 0])
     .paddingOuter(0.5);
 
-  let simulation = forceSimulation(beeswarmData);
   let nodes = [];
-  simulation.on("tick", () => {
-    nodes = simulation.nodes();
-  });
 
-  $: {
-    simulation
+  $: updateBeeswarmData(data, innerWidth);
+
+  function updateBeeswarmData(data, innerWidth){
+    let newData = categories.map(cat => {
+      return data.map(d => {
+        const club_name = d['club_name']
+        const category = cat
+        const value = +d[cat]
+        return { value, club_name, category};
+      })
+    });
+
+    let ageRollup = rollups(
+      data,
+      v => mean(v, d => +d.age),
+      d => d.club_name
+    )
+
+    let newDataRollup = rollups(
+        newData.flat(),
+        v => mean(v, d => d.value),
+        d => d.category,
+        d => d.club_name
+      )
+
+    let beeswarmData = newDataRollup.map((d, i) => {
+      return d[1].map((el,i) => {
+        const ageRollupD = ageRollup.find(a => a[0] === el[0])
+        const category = d[0]
+        const clubName = el[0]
+        const value = el[1]
+        const age = ageRollupD ? ageRollupD[1] : null
+        const clubNameRelabel = clubs.clubsToHighlight.includes(clubName) ? clubName : "Other"
+        if(age){
+          return { category, club_name: clubName, value, age, club_name_relabel: clubNameRelabel, x: xScale(value), y: groupByCategory ? yScale(category) : innerHeight / 2}
+        } else {
+          return
+        }
+      })
+    });
+
+    radiusScale.range(window.innerWidth < 1440 ? [2, 6] : [3, 8]);
+
+    xScale.range([0, innerWidth]);
+
+    let simulation = forceSimulation(beeswarmData.flat())
       .force(
         "x",
         forceX()
@@ -100,6 +101,11 @@
       .alpha(0.3) // [0, 1] The rate at which the simulation finishes. You should increase this if you want a faster simulation, or decrease it if you want more "movement" in the simulation.
       .alphaDecay(0.0005) // [0, 1] The rate at which the simulation alpha approaches 0. you should decrease this if your bubbles are not completing their transitions between simulation states.
       .restart();
+
+    simulation.on("tick", () => {
+      nodes = simulation.nodes();
+    });
+
   }
 
   // Highlight hovered circles and deemphasize others
@@ -187,13 +193,6 @@
     font-weight: 400; /* How bold our text is */
     fill: hsla(212, 10%, 53%, 1); /* The color of our text */
     user-select: none; /* Prevents text from being selected */
-  }
-
-  h1 {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.35rem;
-    font-weight: 600;
-    text-align: center;
   }
 
   circle {

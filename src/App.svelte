@@ -1,6 +1,7 @@
 <script>
   import Beeswarm from "./Beeswarm.svelte";
   import Scatterplot from "./Scatterplot.svelte";
+  import Linechart from "./Linechart.svelte";
   import { onMount } from "svelte"
 	import { csv } from "d3-fetch"
 
@@ -30,13 +31,14 @@
 	let dataset = []
  	onMount(
 		async () => {
-		  dataset = await csv('../src/data/players_22.csv')
+		  dataset = await csv('../src/data/players_allyears.csv')
         .then((data) => {
-          data = data.filter(d => d['league_level'] == "1")
+          //data = data.filter(d => d['league_level'] == "1")
           //data = data.filter(d => d['league_name'] == 'French Ligue 1' || d['league_name'] == 'German 1. Bundesliga' || d['league_name'] == 'Spain Primera Division' || d['league_name'] == 'English Premier League' || d['league_name'] == 'Italian Serie A')
           data.forEach(d => {
             d['overall'] = +d['overall']
             d['wage_eur'] = +d['wage_eur']
+            d['year'] = +d['year']
             //d['club_name'] = d['club_name'].replace(' ', '_')
           })
           return data;
@@ -44,68 +46,115 @@
     }
 	)
 
+  let YEAR = 2022
+
+  $: spain = dataset.filter(d => d['year'] == YEAR && d['league_name'] == 'Spain Primera Division')
+  $: italian = dataset.filter(d => d['year'] == YEAR && d['league_name'] == 'Italian Serie A')
+  $: england = dataset.filter(d => d['year'] == YEAR && d['league_name'] == 'English Premier League')
+  $: german = dataset.filter(d => d['year'] == YEAR && d['league_name'] == 'German 1. Bundesliga')
+
+  let spainClubs = clubs.find(d => d['league'] == 'Spain Primera Division')
+  let italianClubs = clubs.find(d => d['league'] == 'Italian Serie A')
+  let englishClubs = clubs.find(d => d['league'] == 'English Premier League')
+  let germanClubs = clubs.find(d => d['league'] == 'German 1. Bundesliga')
 </script>
 <main>
-  <h1>FIFA 22 - Official Football Game from EA SPORTS</h1>
+  <h1>FIFA - Official Football Game from EA SPORTS</h1>
   {#if dataset.length > 0}
-  <h2>Spain Primera Division Club Comparison</h2>
-  <div class='charts-wrapper'>
-    <div class='scatter'>
-      <Scatterplot 
+  <div class='container'>
+    <h2>Spain Primera Division Comparison</h2>
+    <div class='timeline'>
+      <Linechart 
         data={dataset.filter(d => d['league_name'] == 'Spain Primera Division')}
-        clubs={clubs.find(d => d['league'] == 'Spain Primera Division')}
+        clubs={spainClubs}
+        bind:hoveredDate={YEAR}
       />
     </div>
-    <div class='beeswarm'>
-      <Beeswarm 
-        data={dataset.filter(d => d['league_name'] == 'Spain Primera Division')}
-        clubs={clubs.find(d => d['league'] == 'Spain Primera Division')}
-      />
+    <div class='charts-wrapper'>
+      <div class='scatter'>
+        <Scatterplot 
+          data={spain}
+          clubs={spainClubs}
+        />
+      </div>
+      <div class='beeswarm'>
+        <Beeswarm 
+          data={spain}
+          clubs={spainClubs}
+        />
+      </div>
     </div>
   </div>
-  <h2>Italian Serie A Club Comparison</h2>
-  <div class='charts-wrapper'>
-    <div class='scatter'>
-      <Scatterplot 
+  <div class='container'>
+    <h2>Italian Serie A Comparison</h2>
+    <div class='timeline'>
+      <Linechart 
         data={dataset.filter(d => d['league_name'] == 'Italian Serie A')}
-        clubs={clubs.find(d => d['league'] == 'Italian Serie A')}
+        clubs={italianClubs}
+        bind:hoveredDate={YEAR}
       />
     </div>
-    <div class='beeswarm'>
-      <Beeswarm 
-        data={dataset.filter(d => d['league_name'] == 'Italian Serie A')}
-        clubs={clubs.find(d => d['league'] == 'Italian Serie A')}
-      />
-    </div>
-  </div>
-  <h2>English Premiere League Club Comparison</h2>
-  <div class='charts-wrapper'>
-    <div class='scatter'>
-      <Scatterplot 
-        data={dataset.filter(d => d['league_name'] == 'English Premier League')}
-        clubs={clubs.find(d => d['league'] == 'English Premier League')}
-      />
-    </div>
-    <div class='beeswarm'>
-      <Beeswarm 
-        data={dataset.filter(d => d['league_name'] == 'English Premier League')}
-        clubs={clubs.find(d => d['league'] == 'English Premier League')}
-      />
+    <div class='charts-wrapper'>
+      <div class='scatter'>
+        <Scatterplot 
+          data={italian}
+          clubs={italianClubs}
+        />
+      </div>
+      <div class='beeswarm'>
+        <Beeswarm 
+          data={italian}
+          clubs={italianClubs}
+        />
+      </div>
     </div>
   </div>
-  <h2>German 1. Bundesliga Club Comparison</h2>
-  <div class='charts-wrapper'>
-    <div class='scatter'>
-      <Scatterplot 
-        data={dataset.filter(d => d['league_name'] == 'German 1. Bundesliga')}
-        clubs={clubs.find(d => d['league'] == 'German 1. Bundesliga')}
+  <div class='container'>
+    <h2>English Premiere League Comparison</h2>
+    <div class='timeline'>
+      <Linechart 
+        data={dataset.filter(d => d['league_name'] == 'English Premier League')}
+        clubs={englishClubs}
+        bind:hoveredDate={YEAR}
       />
     </div>
-    <div class='beeswarm'>
-      <Beeswarm 
+    <div class='charts-wrapper'>
+      <div class='scatter'>
+        <Scatterplot 
+          data={england}
+          clubs={englishClubs}
+        />
+      </div>
+      <div class='beeswarm'>
+        <Beeswarm 
+          data={england}
+          clubs={englishClubs}
+        />
+      </div>
+    </div>
+  </div>
+  <div class='container'>
+    <h2>German 1. Bundesliga Comparison</h2>
+    <div class='timeline'>
+      <Linechart 
         data={dataset.filter(d => d['league_name'] == 'German 1. Bundesliga')}
-        clubs={clubs.find(d => d['league'] == 'German 1. Bundesliga')}
+        clubs={germanClubs}
+        bind:hoveredDate={YEAR}
       />
+    </div>
+    <div class='charts-wrapper'>
+      <div class='scatter'>
+        <Scatterplot 
+          data={german}
+          clubs={germanClubs}
+        />
+      </div>
+      <div class='beeswarm'>
+        <Beeswarm 
+          data={german}
+          clubs={germanClubs}
+        />
+      </div>
     </div>
   </div>
   {/if}
@@ -121,6 +170,10 @@
     background: #f0f0f0;
     width: 100vw;
     height: auto;
+  }
+
+  .container {
+    width: 100%
   }
 
   .charts-wrapper {
@@ -141,8 +194,7 @@
 
   h1 {
     font-size: 2rem;
-    margin-bottom: 1rem;
-    font-weight: 700;
+    margin: 1rem;
   }
 
   h2 {
@@ -150,5 +202,6 @@
     color: #333;
     margin-bottom: 2rem;
     line-height: 1.5;
+    font-weight: 700;
   }
 </style>
